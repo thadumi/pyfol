@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from constant import LogicalConstant
-
-
 class LogicalComputation(object):
     def __init__(self, args: Tuple):
         self._args: Tuple[LogicalComputation, ...] = args or ()
@@ -156,11 +153,11 @@ class ExistsLogicalComputation(LogicalComputation):
 
     def as_cnf(self):
         import random
-        constants = [LogicalConstant(name=str(random.randint())) for _ in self._vars]
+        constants = [str(random.randint()) for _ in self._vars]
 
         str_cnf = str(self._proposition)
         for i in range(self._vars):
-            str_cnf = str_cnf.replace(str(self._vars[i]), str(constants[i]))
+            str_cnf = str_cnf.replace(str(self._vars[i]), constants[i])
 
         # TODO(thadumi): to finish
         # https://april.eecs.umich.edu/courses/eecs492_w10/wiki/images/6/6b/CNF_conversion.pdf
