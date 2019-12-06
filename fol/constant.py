@@ -1,7 +1,7 @@
 """
 :Author: thadumi
 :Date: Dec 06, 2019
-:Version: 0.0.1
+:Version: 0.0.2
 """
 
 import logging
@@ -13,7 +13,7 @@ from fol.logic import LogicalComputation
 class LogicalConstant(LogicalComputation):
     def __init__(self, **kwargs):
         super(LogicalConstant, self).__init__(())
-        self.name = kwargs['name']
+        self.name: str = kwargs['name']
 
     def __str__(self):
         return self.name
@@ -34,6 +34,8 @@ def constant(name: str) -> LogicalConstant:
         raise ValueError(msg)
 
     config = {'name': name}
+    logging.debug('Defined a new constant {}'.format(config))
+
     logical_constant = LogicalConstant(**config)
 
     FOL.track_constant(name, logical_constant)

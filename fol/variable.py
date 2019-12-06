@@ -1,19 +1,18 @@
 """
 :Author: Theodor A. Dumitrescu
 :Date: Dec 06, 2019
-:Version: 0.0.1
+:Version: 0.0.2
 """
 
 import logging
 from typing import List, Any
-
-import tensorflow as tf
 
 import fol.fol_status as FOL
 from fol.constant import LogicalConstant
 from fol.logic import LogicalComputation
 
 
+# TODO(thadumi): a closed word variable should be implemented as an iterable
 class LogicalVariable(LogicalComputation):
 
     def __init__(self,
@@ -21,22 +20,19 @@ class LogicalVariable(LogicalComputation):
                  static_value: Any = None,
                  constants: List[LogicalConstant] = None):
         super(LogicalVariable, self).__init__(())
-        self.name = name
-        self.value = static_value
+        self.name: str = name
+        self.value: Any = static_value
 
-        self.closed_world = constants is not None
-        self.constants = constants
+        self.closed_world: bool = constants is not None
+        self.constants: List[LogicalConstant] = constants
 
         if self.closed_world:
             self._args = constants
         else:  # static value is provided but... to think about it
             self.value = static_value
 
-    def tensor(self) -> tf.Tensor:
-        if self.closed_world:  # (thadumi): we could create two subclass ClosedWordVariable and StaticVariable
-            return self._compute(*[constant.tensor() for constant in self.constants])
-        else:
-            return self.value
+    def is_closed_world(self) -> bool:
+        return self.closed_world
 
     def __str__(self):
         return self.name
