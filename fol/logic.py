@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from typing import Tuple
 
-class LogicalComputation(object):
+
+class LogicalExpression(object):
     def __init__(self, args: Tuple):
-        self._args: Tuple[LogicalComputation, ...] = args or ()
+        self._args: Tuple[LogicalExpression, ...] = args or ()
 
     def _compute(self, *args):
         raise Exception(self.__class__.__name__ + ' needs to define the _compute method')
@@ -18,39 +19,39 @@ class LogicalComputation(object):
     def as_cnf(self):
         raise Exception(self.__class__.__name__ + 'needs to define the CNF')
 
-    def and_(self, other: LogicalComputation) -> AndLogicalComputation:
+    def and_(self, other: LogicalExpression) -> AndLogicalExpression:
         return self.__and__(other)
 
-    def _and_(self, other: LogicalComputation) -> AndLogicalComputation:
+    def _and_(self, other: LogicalExpression) -> AndLogicalExpression:
         return self.__and__(other)
 
-    def __and__(self, other: LogicalComputation) -> AndLogicalComputation:
-        return AndLogicalComputation(args=(self, other))
+    def __and__(self, other: LogicalExpression) -> AndLogicalExpression:
+        return AndLogicalExpression(self, other)
 
-    def or_(self, other: LogicalComputation) -> OrLogicalComputation:
+    def or_(self, other: LogicalExpression) -> OrLogicalExpression:
         return self.__or__(other)
 
-    def _or_(self, other: LogicalComputation) -> OrLogicalComputation:
+    def _or_(self, other: LogicalExpression) -> OrLogicalExpression:
         return self.__or__(other)
 
-    def __or__(self, other: LogicalComputation) -> OrLogicalComputation:
-        return OrLogicalComputation(args=(self, other))
+    def __or__(self, other: LogicalExpression) -> OrLogicalExpression:
+        return OrLogicalExpression(self, other)
 
-    def negated(self) -> NotLogicalComputation:
+    def negated(self) -> NotLogicalExpression:
         return self.__invert__()
 
-    def not_(self) -> NotLogicalComputation:
+    def not_(self) -> NotLogicalExpression:
         return self.__invert__()
 
-    def __invert__(self) -> NotLogicalComputation:
-        return NotLogicalComputation(args=(self,))
+    def __invert__(self) -> NotLogicalExpression:
+        return NotLogicalExpression(self)
 
-    def __rshift__(self, other: LogicalComputation) -> ImpliesLogicalComputation:
-        return ImpliesLogicalComputation(args=(self, other))
+    def __rshift__(self, other: LogicalExpression) -> ImplicationLogicalExpression:
+        return ImplicationLogicalExpression(self, other)
 
-    def __eq__(self, other: LogicalComputation) -> EquivalenceLogicalComputation:
+    def __eq__(self, other: LogicalExpression) -> EquivalenceLogicalExpression:
         # WARN overriding __eq__ could cause issues on dictionaries
-        return EquivalenceLogicalComputation(args=(self, other))
+        return EquivalenceLogicalExpression(self, other)
 
     def __hash__(self):
         # needed by tf.function for hashing the self argument in logical predicate name
@@ -58,62 +59,69 @@ class LogicalComputation(object):
         return hash(str(self))
 
 
+class UnitaryLogicalExpression(LogicalExpression):
+    def __init__(self, arg: LogicalExpression):
+        super(UnitaryLogicalExpression, self).__init__(args=(arg,))
+
+    @property
+    def arg(self):
+        return self._args[0]
+
+
+class BinaryLogicalExpression(LogicalExpression):
+    def __init__(self,
+                 alpha: LogicalExpression,
+                 beta: LogicalExpression):
+        super(BinaryLogicalExpression, self).__init__(args=(alpha, beta))
+
+    @property
+    def alpha(self):
+        return self._args[0]
+
+    @property
+    def beta(self):
+        return self._args[1]
+
+
 # TODO(thadumi): AND should be a monadic type and return itself during an AND operation
 # ie AndLC.and(LC) -> AndLC has a new argument which is LC
 # the same of OR
 # this could be done via __rand__ (the operations are aggregated from lest to right)
-class AndLogicalComputation(LogicalComputation):
-    def __init__(self, args: Tuple[LogicalComputation, LogicalComputation]):
-        super(AndLogicalComputation, self).__init__(args)
+class AndLogicalExpression(BinaryLogicalExpression):
+    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+        super(AndLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
         return ' ∧ '.join([str(arg) for arg in self._args])
 
 
-class OrLogicalComputation(LogicalComputation):
-    def __init__(self, args: Tuple[LogicalComputation, LogicalComputation]):
-        super(OrLogicalComputation, self).__init__(args)
+class OrLogicalExpression(BinaryLogicalExpression):
+    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+        super(OrLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
         return ' ∨ '.join([str(arg) for arg in self._args])
 
 
-class NotLogicalComputation(LogicalComputation):
-    def __init__(self, args: Tuple[LogicalComputation]):
-        super(NotLogicalComputation, self).__init__(args)
-
-    def as_cnf(self):
-        if isinstance(self._args[0], type(self)):  # if not not A
-            return self._args[0]._args[0]
-        else:
-            return self
+class NotLogicalExpression(UnitaryLogicalExpression):
+    def __init__(self, arg: LogicalExpression):
+        super(NotLogicalExpression, self).__init__(arg)
 
     def __str__(self):
         return '¬' + str(self._args[0])
 
 
-class ImpliesLogicalComputation(LogicalComputation):
-    def __init__(self, args: Tuple[LogicalComputation, LogicalComputation]):
-        super(ImpliesLogicalComputation, self).__init__(args)
-
-    def as_cnf(self):
-        '''
-
-        :return: ¬α∨β
-        '''
-        alpha = self._args[0]
-        beta = self._args[1]
-
-        return Not(alpha) | beta
-
+class ImplicationLogicalExpression(BinaryLogicalExpression):
+    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+        super(ImplicationLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
         return str(self._args[0]) + ' ⇒ ' + str(self._args[1])
 
 
-class EquivalenceLogicalComputation(LogicalComputation):
-    def __init__(self, args: Tuple[LogicalComputation, LogicalComputation]):
-        super(EquivalenceLogicalComputation, self).__init__(args)
+class EquivalenceLogicalExpression(BinaryLogicalExpression):
+    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+        super(EquivalenceLogicalExpression, self).__init__(alpha, beta)
 
     def as_cnf(self, first_step=False):
         """
@@ -133,53 +141,57 @@ class EquivalenceLogicalComputation(LogicalComputation):
         return str(self._args[0]) + ' ⇔ ' + str(self._args[1])
 
 
-class ForAllLogicalComputation(LogicalComputation):
-    def __init__(self, variables, proposition: LogicalComputation):
-        super(ForAllLogicalComputation, self).__init__(args=tuple([*variables, proposition]))
+class ForAllLogicalExpression(LogicalExpression):
+    def __init__(self, variables, proposition: LogicalExpression):
+        super(ForAllLogicalExpression, self).__init__(args=tuple([*variables, proposition]))
         self._vars = variables
         self._proposition = proposition
 
     # TODO(thadumi) as_cnf
 
+    @property
+    def variables(self):
+        return self._vars
+
+    @property
+    def proposition(self) -> LogicalExpression:
+        return self._proposition
+
     def __str__(self):
         return '∀ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
 
 
-class ExistsLogicalComputation(LogicalComputation):
-    def __init__(self, variables, proposition: LogicalComputation):
-        super(ExistsLogicalComputation, self).__init__(args=tuple([*variables, proposition]))
+class ExistsLogicalExpression(LogicalExpression):
+    def __init__(self, variables, proposition: LogicalExpression):
+        super(ExistsLogicalExpression, self).__init__(args=tuple([*variables, proposition]))
         self._vars = variables
         self._proposition = proposition
 
-    def as_cnf(self):
-        import random
-        constants = [str(random.randint()) for _ in self._vars]
+    @property
+    def variables(self):
+        return self._vars
 
-        str_cnf = str(self._proposition)
-        for i in range(self._vars):
-            str_cnf = str_cnf.replace(str(self._vars[i]), constants[i])
-
-        # TODO(thadumi): to finish
-        # https://april.eecs.umich.edu/courses/eecs492_w10/wiki/images/6/6b/CNF_conversion.pdf
-
+    @property
+    def proposition(self) -> LogicalExpression:
+        return self._proposition
 
     def __str__(self):
         return '∃ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
 
 
-def Not(lc: LogicalComputation) -> LogicalComputation:
+def Not(lc: LogicalExpression) -> LogicalExpression:
     return lc.negated()
 
 
-def And(arg1: LogicalComputation, arg2: LogicalComputation) -> LogicalComputation:
+def And(arg1: LogicalExpression, arg2: LogicalExpression) -> LogicalExpression:
     return arg1.and_(arg2)
 
 
-def Or(arg1: LogicalComputation, arg2: LogicalComputation) -> LogicalComputation:
+def Or(arg1: LogicalExpression, arg2: LogicalExpression) -> LogicalExpression:
     return arg1.or_(arg2)
 
 
-def Implies(arg1: LogicalComputation, arg2: LogicalComputation) -> ImpliesLogicalComputation:
+def Implies(arg1: LogicalExpression, arg2: LogicalExpression) -> ImplicationLogicalExpression:
     return arg1 >> arg2
 
 
@@ -187,7 +199,7 @@ def Equiv(arg1, arg2):
     return arg1 == arg2
 
 
-def Forall(variables, proposition: LogicalComputation) -> ForAllLogicalComputation:
+def Forall(variables, proposition: LogicalExpression) -> ForAllLogicalExpression:
     # TODO(thadumi) add doc for Forall functional API
 
     if type(variables) is not list and type(variables) is not tuple:
@@ -202,13 +214,13 @@ def Forall(variables, proposition: LogicalComputation) -> ForAllLogicalComputati
             raise ValueError('Founded a non instance of LogicalVariable in {}'.format(variables))
     '''
 
-    return ForAllLogicalComputation(variables, proposition)
+    return ForAllLogicalExpression(variables, proposition)
 
 
-def Exists(variables, proposition: LogicalComputation) -> LogicalComputation:
+def Exists(variables, proposition: LogicalExpression) -> LogicalExpression:
     # TODO(thadumi) add doc for Exist functional API
 
     if type(variables) is not list or type(variables) is not tuple:
         variables = (variables,)
 
-    return ExistsLogicalComputation(variables, proposition)
+    return ExistsLogicalExpression(variables, proposition)

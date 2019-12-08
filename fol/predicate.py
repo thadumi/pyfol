@@ -6,10 +6,10 @@
 import logging
 
 import fol.fol_status as FOL
-from fol.logic import LogicalComputation
+from fol.logic import LogicalExpression
 
 
-class LogicalPredicate(LogicalComputation):
+class LogicalPredicate(LogicalExpression):
     def __init__(self,
                  predicate,
                  input_terms=None):
@@ -26,7 +26,7 @@ class Predicate(object):
         self.name = kwargs['name']
         self.number_of_arguments = kwargs['number_of_arguments']
 
-    def __call__(self, *args: LogicalComputation, **kwargs) -> LogicalPredicate:
+    def __call__(self, *args: LogicalExpression, **kwargs) -> LogicalPredicate:
         return LogicalPredicate(self, [*args])
 
 

@@ -9,11 +9,11 @@ from typing import List, Any
 
 import fol.fol_status as FOL
 from fol.constant import LogicalConstant
-from fol.logic import LogicalComputation
+from fol.logic import LogicalExpression
 
 
 # TODO(thadumi): a closed word variable should be implemented as an iterable
-class LogicalVariable(LogicalComputation):
+class LogicalVariable(LogicalExpression):
 
     def __init__(self,
                  name: str = None,
