@@ -178,13 +178,11 @@ class EquivalenceLogicalExpression(BinaryLogicalExpression):
         return str(self._args[0]) + ' ⇔ ' + str(self._args[1])
 
 
-class ForAllLogicalExpression(UnitaryLogicalExpression):
+class LogicalQualifier(UnitaryLogicalExpression):
     def __init__(self, variables: Tuple[LogicalVariable, ...], proposition: LogicalExpression):
-        super(ForAllLogicalExpression, self).__init__(proposition)
+        super(LogicalQualifier, self).__init__(proposition)
         self._vars: Tuple[LogicalVariable, ...] = variables
         self._proposition: LogicalExpression = proposition
-
-    # TODO(thadumi) as_cnf
 
     @property
     def variables(self) -> Tuple[LogicalVariable, ...]:
@@ -194,23 +192,18 @@ class ForAllLogicalExpression(UnitaryLogicalExpression):
     def proposition(self) -> LogicalExpression:
         return self._proposition
 
+
+class UniversalQuantifier(LogicalQualifier):
+    def __init__(self, variables: Tuple[LogicalVariable, ...], proposition: LogicalExpression):
+        super(UniversalQuantifier, self).__init__(variables, proposition)
+
     def __str__(self):
         return '∀ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
 
 
-class ExistsLogicalExpression(UnitaryLogicalExpression):
+class ExistentialQualifier(LogicalQualifier):
     def __init__(self, variables: Tuple[LogicalVariable, ...], proposition: LogicalExpression):
-        super(ExistsLogicalExpression, self).__init__(proposition)
-        self._vars: Tuple[LogicalVariable, ...] = variables
-        self._proposition: LogicalExpression = proposition
-
-    @property
-    def variables(self) -> Tuple[LogicalVariable, ...]:
-        return self._vars
-
-    @property
-    def proposition(self) -> LogicalExpression:
-        return self._proposition
+        super(ExistentialQualifier, self).__init__(variables, proposition)
 
     def __str__(self):
         return '∃ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
@@ -236,7 +229,7 @@ def Equiv(arg1, arg2):
     return arg1 == arg2
 
 
-def Forall(variables, proposition: LogicalExpression) -> ForAllLogicalExpression:
+def Forall(variables, proposition: LogicalExpression) -> UniversalQuantifier:
     # TODO(thadumi) add doc for Forall functional API
 
     if type(variables) is not list and type(variables) is not tuple:
@@ -254,13 +247,13 @@ def Forall(variables, proposition: LogicalExpression) -> ForAllLogicalExpression
             raise ValueError('Founded a non instance of LogicalVariable in {}'.format(variables))
     '''
 
-    return ForAllLogicalExpression(variables, proposition)
+    return UniversalQuantifier(variables, proposition)
 
 
-def Exists(variables, proposition: LogicalExpression) -> LogicalExpression:
+def Exists(variables, proposition: LogicalExpression) -> ExistentialQualifier:
     # TODO(thadumi) add doc for Exist functional API
 
     if type(variables) is not list or type(variables) is not tuple:
         variables = (variables,)
 
-    return ExistsLogicalExpression(variables, proposition)
+    return ExistentialQualifier(variables, proposition)
