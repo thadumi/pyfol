@@ -1,34 +1,39 @@
 """
 :Author: thadumi
-:Date: Dec 06, 2019
-:Version: 0.0.1
+:Date: Dec 09, 2019
+:Version: 0.0.2
 """
+from __future__ import annotations
+
 import logging
+from typing import Tuple
 
 import fol.fol_status as FOL
-from fol.logic import LogicalExpression
-from logic import LogicalTerm
+from fol.logic import LogicalExpression, LogicalTerm
+
+
+class Predicate(object):
+    def __init__(self, **kwargs):
+        logging.debug('[predicate] Clearing a new predicate: ' + str(kwargs))
+        self.name: str = kwargs['name']
+        self.number_of_arguments: int = kwargs['number_of_arguments']
+
+    def __call__(self, *args: LogicalTerm, **kwargs) -> LogicalPredicate:
+        if len(args) != self.number_of_arguments:
+            raise ValueError('The predicate {} is defined with {} arguments but has been called with {} args.'
+                             .format(self.name, self.number_of_arguments, len(args)))
+        return LogicalPredicate(self, tuple([*args]))
 
 
 class LogicalPredicate(LogicalExpression):
     def __init__(self,
-                 predicate,
-                 input_terms=None):
+                 predicate: Predicate,
+                 input_terms: Tuple[LogicalTerm, ...]):
         super(LogicalPredicate, self).__init__(input_terms)
         self.predicate = predicate
 
     def __str__(self):
         return self.predicate.name + '(' + ', '.join([str(i) for i in self._args]) + ')'
-
-
-class Predicate(object):
-    def __init__(self, **kwargs):
-        logging.debug('Clearing a new predicate: ' + str(kwargs))
-        self.name = kwargs['name']
-        self.number_of_arguments = kwargs['number_of_arguments']
-
-    def __call__(self, *args: LogicalTerm, **kwargs) -> LogicalPredicate:
-        return LogicalPredicate(self, tuple([*args]))
 
 
 def predicate(name: str,
@@ -47,7 +52,7 @@ def predicate(name: str,
         raise ValueError(msg)
 
     if number_of_arguments <= 0:
-        raise ValueError
+        raise ValueError('A predicate should be defined with at least one argument.')
 
     config = {'name': name,
               'number_of_arguments': number_of_arguments
