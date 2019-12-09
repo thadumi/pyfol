@@ -50,7 +50,22 @@ class Logic(object):
         return hash(str(self))
 
     def to_nnf(self) -> Logic:
-        # raise Exception(self.__class__.__name__ + ' needs to implement the method to_nnf')
+        """
+         A formula is in negation normal form (NNF), if it does not contain implication or equivalence symbols,
+         and every negation symbol occurs directly in front of an atom.
+         A transformation into NNF can be performed with the following rules:
+            ¬ ¬ ϕ       →  ϕ
+            ¬ (ϕ ∧ ψ)   →  ¬ ϕ ∨ ¬ ψ
+            ¬ (ϕ ∨ ϕ)   →  ¬ ϕ ∧ ¬ ψ
+            ¬ (∀x.ϕ)    →  ∃x.ϕ
+            ¬ (∃x.ϕ)    →  ∀x.¬ ϕ
+            ϕ ⊃ ψ       →  ¬ ϕ ∨ ψ
+            ϕ1 ≡ ϕ2     →  (ϕ1 ⊃ ϕ2) ∧ (ϕ2 ⊃ ϕ1)
+            ϕ1 ≡ ϕ2     →  (ϕ1 ∧ ϕ2) ∨ (¬ ϕ1 ∧ ¬ ϕ2)
+
+        For more information see https://www.sciencedirect.com/topics/computer-science/negation-normal-form
+        :return: the NNF of the current expresion according with the previous rules
+        """
         return self
 
 
