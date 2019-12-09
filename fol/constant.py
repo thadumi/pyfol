@@ -7,16 +7,7 @@
 import logging
 
 import fol.fol_status as FOL
-from fol.logic import LogicalExpression
-
-
-class LogicalConstant(LogicalExpression):
-    def __init__(self, **kwargs):
-        super(LogicalConstant, self).__init__(())
-        self.name: str = kwargs['name']
-
-    def __str__(self):
-        return self.name
+from fol.logic import LogicalConstant
 
 
 def constant(name: str) -> LogicalConstant:

@@ -1,40 +1,31 @@
 """
 :Author: thadumi
-:Date: Dec 06, 2019
-:Version: 0.0.2
+:Date: Dec 09, 2019
+:Version: 0.0.3
 """
 # for https://www.python.org/dev/peps/pep-0563/
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, Any, List
 
 
-class LogicalExpression(object):
-    def __init__(self, args: Tuple):
-        self._args: Tuple[LogicalExpression, ...] = args or ()
-
-    def _compute(self, *args):
-        raise Exception(self.__class__.__name__ + ' needs to define the _compute method')
-
-    def as_cnf(self):
-        raise Exception(self.__class__.__name__ + 'needs to define the CNF')
-
-    def and_(self, other: LogicalExpression) -> AndLogicalExpression:
+class Logic(object):
+    def and_(self, other: Logic) -> AndLogicalExpression:
         return self.__and__(other)
 
-    def _and_(self, other: LogicalExpression) -> AndLogicalExpression:
+    def _and_(self, other: Logic) -> AndLogicalExpression:
         return self.__and__(other)
 
-    def __and__(self, other: LogicalExpression) -> AndLogicalExpression:
+    def __and__(self, other: Logic) -> AndLogicalExpression:
         return AndLogicalExpression(self, other)
 
-    def or_(self, other: LogicalExpression) -> OrLogicalExpression:
+    def or_(self, other: Logic) -> OrLogicalExpression:
         return self.__or__(other)
 
-    def _or_(self, other: LogicalExpression) -> OrLogicalExpression:
+    def _or_(self, other: Logic) -> OrLogicalExpression:
         return self.__or__(other)
 
-    def __or__(self, other: LogicalExpression) -> OrLogicalExpression:
+    def __or__(self, other: Logic) -> OrLogicalExpression:
         return OrLogicalExpression(self, other)
 
     def negated(self) -> NotLogicalExpression:
@@ -46,10 +37,10 @@ class LogicalExpression(object):
     def __invert__(self) -> NotLogicalExpression:
         return NotLogicalExpression(self)
 
-    def __rshift__(self, other: LogicalExpression) -> ImplicationLogicalExpression:
+    def __rshift__(self, other: Logic) -> ImplicationLogicalExpression:
         return ImplicationLogicalExpression(self, other)
 
-    def __eq__(self, other: LogicalExpression) -> EquivalenceLogicalExpression:
+    def __eq__(self, other: Logic) -> EquivalenceLogicalExpression:
         # WARN overriding __eq__ could cause issues on dictionaries
         return EquivalenceLogicalExpression(self, other)
 
@@ -59,8 +50,54 @@ class LogicalExpression(object):
         return hash(str(self))
 
 
+class LogicalTerm(Logic):
+    def __init__(self, name: str):
+        super(LogicalTerm, self).__init__()
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    def __str__(self):
+        return self.name
+
+
+class LogicalConstant(LogicalTerm):
+    def __init__(self, name: str):
+        if ' ' in name:
+            raise ValueError('The symbolic name of a constant has to be a single word starting with an upper letter'
+                             'e.g. A | A1 | AB12 | John | ....')
+        super(LogicalConstant, self).__init__(name.title())
+
+
+class LogicalVariable(LogicalTerm):
+    def __init__(self,
+                 name: str,
+                 static_value: Any = None,
+                 constants: List[LogicalConstant] = None):
+        super(LogicalVariable, self).__init__(name)
+
+        self._value: Any = static_value
+
+        self._close_world: bool = constants is not None
+        self._constants: List[LogicalConstant] = constants
+
+    @property
+    def is_closed_world(self):
+        return self._close_world
+
+
+class LogicalExpression(Logic):
+    def __init__(self, args: Tuple):
+        self._args: Tuple[LogicalExpression, ...] = args or ()
+
+    def as_cnf(self):
+        raise Exception(self.__class__.__name__ + 'needs to define the CNF')
+
+
 class UnitaryLogicalExpression(LogicalExpression):
-    def __init__(self, arg: LogicalExpression):
+    def __init__(self, arg: Logic):
         super(UnitaryLogicalExpression, self).__init__(args=(arg,))
 
     @property
@@ -70,8 +107,8 @@ class UnitaryLogicalExpression(LogicalExpression):
 
 class BinaryLogicalExpression(LogicalExpression):
     def __init__(self,
-                 alpha: LogicalExpression,
-                 beta: LogicalExpression):
+                 alpha: Logic,
+                 beta: Logic):
         super(BinaryLogicalExpression, self).__init__(args=(alpha, beta))
 
     @property
@@ -88,7 +125,7 @@ class BinaryLogicalExpression(LogicalExpression):
 # the same of OR
 # this could be done via __rand__ (the operations are aggregated from lest to right)
 class AndLogicalExpression(BinaryLogicalExpression):
-    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+    def __init__(self, alpha: Logic, beta: Logic):
         super(AndLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
@@ -96,7 +133,7 @@ class AndLogicalExpression(BinaryLogicalExpression):
 
 
 class OrLogicalExpression(BinaryLogicalExpression):
-    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+    def __init__(self, alpha: Logic, beta: Logic):
         super(OrLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
@@ -104,7 +141,7 @@ class OrLogicalExpression(BinaryLogicalExpression):
 
 
 class NotLogicalExpression(UnitaryLogicalExpression):
-    def __init__(self, arg: LogicalExpression):
+    def __init__(self, arg: Logic):
         super(NotLogicalExpression, self).__init__(arg)
 
     def __str__(self):
@@ -112,7 +149,7 @@ class NotLogicalExpression(UnitaryLogicalExpression):
 
 
 class ImplicationLogicalExpression(BinaryLogicalExpression):
-    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+    def __init__(self, alpha: Logic, beta: Logic):
         super(ImplicationLogicalExpression, self).__init__(alpha, beta)
 
     def __str__(self):
@@ -120,7 +157,7 @@ class ImplicationLogicalExpression(BinaryLogicalExpression):
 
 
 class EquivalenceLogicalExpression(BinaryLogicalExpression):
-    def __init__(self, alpha: LogicalExpression, beta: LogicalExpression):
+    def __init__(self, alpha: Logic, beta: Logic):
         super(EquivalenceLogicalExpression, self).__init__(alpha, beta)
 
     def as_cnf(self, first_step=False):
@@ -141,17 +178,17 @@ class EquivalenceLogicalExpression(BinaryLogicalExpression):
         return str(self._args[0]) + ' ⇔ ' + str(self._args[1])
 
 
-class ForAllLogicalExpression(LogicalExpression):
-    def __init__(self, variables, proposition: LogicalExpression):
-        super(ForAllLogicalExpression, self).__init__(args=tuple([*variables, proposition]))
-        self._vars = variables
-        self._proposition = proposition
+class ForAllLogicalExpression(UnitaryLogicalExpression):
+    def __init__(self, variables: Tuple[LogicalVariable, ...], proposition: LogicalExpression):
+        super(ForAllLogicalExpression, self).__init__(proposition)
+        self._vars: Tuple[LogicalVariable, ...] = variables
+        self._proposition: LogicalExpression = proposition
 
     # TODO(thadumi) as_cnf
 
     @property
-    def variables(self):
-        return self._vars
+    def variables(self) -> Tuple[LogicalVariable, ...]:
+        return tuple(self._vars)
 
     @property
     def proposition(self) -> LogicalExpression:
@@ -161,14 +198,14 @@ class ForAllLogicalExpression(LogicalExpression):
         return '∀ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
 
 
-class ExistsLogicalExpression(LogicalExpression):
-    def __init__(self, variables, proposition: LogicalExpression):
-        super(ExistsLogicalExpression, self).__init__(args=tuple([*variables, proposition]))
-        self._vars = variables
-        self._proposition = proposition
+class ExistsLogicalExpression(UnitaryLogicalExpression):
+    def __init__(self, variables: Tuple[LogicalVariable, ...], proposition: LogicalExpression):
+        super(ExistsLogicalExpression, self).__init__(proposition)
+        self._vars: Tuple[LogicalVariable, ...] = variables
+        self._proposition: LogicalExpression = proposition
 
     @property
-    def variables(self):
+    def variables(self) -> Tuple[LogicalVariable, ...]:
         return self._vars
 
     @property
@@ -179,19 +216,19 @@ class ExistsLogicalExpression(LogicalExpression):
         return '∃ ' + ','.join([str(var) for var in self._vars]) + ': ' + str(self._proposition)
 
 
-def Not(lc: LogicalExpression) -> LogicalExpression:
+def Not(lc: Logic) -> LogicalExpression:
     return lc.negated()
 
 
-def And(arg1: LogicalExpression, arg2: LogicalExpression) -> LogicalExpression:
+def And(arg1: Logic, arg2: Logic) -> LogicalExpression:
     return arg1.and_(arg2)
 
 
-def Or(arg1: LogicalExpression, arg2: LogicalExpression) -> LogicalExpression:
+def Or(arg1: Logic, arg2: Logic) -> LogicalExpression:
     return arg1.or_(arg2)
 
 
-def Implies(arg1: LogicalExpression, arg2: LogicalExpression) -> ImplicationLogicalExpression:
+def Implies(arg1: Logic, arg2: Logic) -> ImplicationLogicalExpression:
     return arg1 >> arg2
 
 
@@ -204,6 +241,9 @@ def Forall(variables, proposition: LogicalExpression) -> ForAllLogicalExpression
 
     if type(variables) is not list and type(variables) is not tuple:
         variables = (variables,)
+
+    if type(variables) is list:
+        variables = tuple(variables)
 
     '''    if isinstance(proposition, LogicalComputation) \
                 and not(isinstance(proposition, LogicalVariable) or isinstance(proposition, LogicalConstant)):
