@@ -6,7 +6,7 @@
 # NOTE(thadumi) should be this be weakref.WeakKeyDictionary references?
 # if so the user should take care of hard referencing every predicate and axiom
 from logic import LogicalExpression
-from predicate import LogicalPredicate
+from predicate import Predicate
 
 CONSTANTS = {}
 PREDICATES = {}
@@ -25,7 +25,7 @@ def constant_already_defined(name: str) -> bool:
     return name in CONSTANTS.keys()
 
 
-def track_predicate(predicate_name: str, meta: LogicalPredicate):
+def track_predicate(predicate_name: str, meta: Predicate):
     PREDICATES[predicate_name] = meta
     return meta
 

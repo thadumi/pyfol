@@ -49,6 +49,10 @@ class Logic(object):
         # WARN maybe should be considered a better hash value (?)
         return hash(str(self))
 
+    def to_nnf(self) -> Logic:
+        # raise Exception(self.__class__.__name__ + ' needs to implement the method to_nnf')
+        return self
+
 
 class LogicalTerm(Logic):
     def __init__(self, name: str):
@@ -89,11 +93,8 @@ class LogicalVariable(LogicalTerm):
 
 
 class LogicalExpression(Logic):
-    def __init__(self, args: Tuple):
-        self._args: Tuple[LogicalExpression, ...] = args or ()
-
-    def as_cnf(self):
-        raise Exception(self.__class__.__name__ + 'needs to define the CNF')
+    def __init__(self, args: Tuple[Logic, ...]):
+        self._args: Tuple[Logic, ...] = args or ()
 
 
 class UnitaryLogicalExpression(LogicalExpression):
@@ -145,7 +146,35 @@ class NotLogicalExpression(UnitaryLogicalExpression):
         super(NotLogicalExpression, self).__init__(arg)
 
     def __str__(self):
-        return '¬' + str(self._args[0])
+        if isinstance(self._args[0], LogicalTerm):
+            return '¬' + str(self._args[0])
+        else:
+            return '¬({})'.format(str(self._args[0]))
+
+    def to_nnf(self) -> Logic:
+        child_op = type(self.arg)
+        child = self.arg
+
+        if child_op is OrLogicalExpression:  # ~ (A | B) -> ~A & ~B
+            return Not(child.alpha).to_nnf() & Not(child.beta).to_nnf()
+
+        if child_op is AndLogicalExpression:  # ~ (A & B) -> ~A | ~B
+            return Not(child.alpha).to_nnf() & Not(child.beta).to_nnf()
+
+        if child_op is NotLogicalExpression:  # ~ ~A -> A
+            return self.arg.arg.to_nnf()
+
+        if child_op is ExistentialQualifier:  # ~∃x.A -> ∀x.~A
+            return Forall(child.variables, Not(child.proposition).to_nnf())
+
+        if child_op is UniversalQuantifier:  # ~∀x.A -> ∃x.~A
+            return Exists(child.variables, Not(child.proposition).to_nnf())
+
+        # child_op should be a LogicalTerm or equivalence
+        if child_op is LogicalVariable or child_op is LogicalConstant:
+            return self
+        else:
+            return Not(child.to_nnf()).to_nnf()
 
 
 class ImplicationLogicalExpression(BinaryLogicalExpression):
@@ -154,6 +183,9 @@ class ImplicationLogicalExpression(BinaryLogicalExpression):
 
     def __str__(self):
         return str(self._args[0]) + ' ⇒ ' + str(self._args[1])
+
+    def to_nnf(self) -> Logic:
+        return Not(self.alpha).to_nnf() | self.beta.to_nnf()
 
 
 class EquivalenceLogicalExpression(BinaryLogicalExpression):

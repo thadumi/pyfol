@@ -8,11 +8,12 @@ from typing import List
 from constant import LogicalConstant
 from fol.logic import EquivalenceLogicalExpression, AndLogicalExpression, \
     OrLogicalExpression, ImplicationLogicalExpression, LogicalExpression, NotLogicalExpression, \
-    ForAllLogicalExpression, ExistsLogicalExpression, Not
+    UniversalQuantifier, ExistentialQualifier, Not
 # Eliminate ⇔ , replacing ⇔ (α⇒β)∧(β⇒α).
 from variable import LogicalVariable, variable
 
 
+# noinspection PyProtectedMember
 def equivalence_to_cnf(lc: EquivalenceLogicalExpression) -> AndLogicalExpression:
     if not isinstance(lc, EquivalenceLogicalExpression):
         raise ValueError
@@ -43,15 +44,15 @@ def move_not_inwards(lc: LogicalExpression) -> LogicalExpression:
     not_arg: LogicalExpression = lc._args[0]
     not_arg_type = type(not_arg)
 
-    if not_arg_type == ForAllLogicalExpression:
-        not_arg: ForAllLogicalExpression
+    if not_arg_type == UniversalQuantifier:
+        not_arg: UniversalQuantifier
 
-        return ExistsLogicalExpression(not_arg.variables, move_not_inwards(not_arg.proposition.negated()))
+        return ExistentialQualifier(not_arg.variables, move_not_inwards(not_arg.proposition.negated()))
 
-    if not_arg_type == ExistsLogicalExpression:
-        not_arg: ExistsLogicalExpression
+    if not_arg_type == ExistentialQualifier:
+        not_arg: ExistentialQualifier
 
-        return ForAllLogicalExpression(not_arg._vars, move_not_inwards(not_arg._proposition.negated()))
+        return UniversalQuantifier(not_arg._vars, move_not_inwards(not_arg._proposition.negated()))
 
     if not_arg_type == OrLogicalExpression:
         not_arg: OrLogicalExpression
@@ -109,20 +110,20 @@ def standardize_apart(lc, previous_variable=None):
     if previous_variable is None:
         previous_variable = set()
 
-    if type(lc) is ForAllLogicalExpression or type(lc) is ExistsLogicalExpression:
+    if type(lc) is UniversalQuantifier or type(lc) is ExistentialQualifier:
         variables = set(lc.variables())
         variables_to_change = previous_variable.intersection(variables)
 
         new_variable_name = [variable(randomString(), static_value=var.value, constants=var.constants)
                              for var in variables_to_change]
 
-        proposition = None # TODO
-        return ForAllLogicalExpression(new_variable_name + list(variables - variables_to_change), proposition)
+        proposition = None  # TODO
+        return UniversalQuantifier(tuple(new_variable_name + list(variables - variables_to_change)), proposition)
 
 
 # noinspection PyProtectedMember
 def skolemization(lc):
-    if type(lc) not in [ForAllLogicalExpression, ExistsLogicalExpression]:
+    if type(lc) not in [UniversalQuantifier, ExistentialQualifier]:
         return lc
 
     vars: List[LogicalVariable] = lc.variables

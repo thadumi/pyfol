@@ -30,12 +30,12 @@ Friends = predicate('Friends', 2)
 Smokes = predicate('Smokes', 1)
 Cancer = predicate('Cancer', 1)
 
-p = variable('p', constants=list(g.values()))
-q = variable('q', constants=list(g.values()))
-p1 = variable('p1', constants=list(g1.values()))
-q1 = variable('q1', constants=list(g1.values()))
-p2 = variable('p2', constants=list(g2.values()))
-q2 = variable('q2', constants=list(g2.values()))
+p = variable('p', constants=tuple(g.values()))
+q = variable('q', constants=tuple(g.values()))
+p1 = variable('p1', constants=tuple(g1.values()))
+q1 = variable('q1', constants=tuple(g1.values()))
+p2 = variable('p2', constants=tuple(g2.values()))
+q2 = variable('q2', constants=tuple(g2.values()))
 
 for (x, y) in friends:
     FOL.tell(Friends(g[x], g[y]))

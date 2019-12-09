@@ -5,13 +5,13 @@
 """
 
 import logging
-from typing import List, Any
+from typing import List, Any, Tuple
 
 import fol.fol_status as FOL
 from fol.logic import LogicalVariable, LogicalConstant
 
 
-def variable(name: str, static_value: Any = None, constants: List[LogicalConstant] = None) -> LogicalVariable:
+def variable(name: str, static_value: Any = None, constants: Tuple[LogicalConstant, ...] = None) -> LogicalVariable:
     if FOL.variable_already_defined(name):
         msg = '[variable] There is already a variable having the name `{}`'.format(name)
         logging.error(msg)
